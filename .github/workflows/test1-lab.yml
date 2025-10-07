@@ -18,11 +18,10 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: us-east-1  
 
     - name: Sync files to S3
       run: |
-        aws s3 sync . s3://758515246631-us-east-1-test1-lab --exclude ".git/*"
+        aws s3 sync . s3://test-gh-actionsn-um-2025 --exclude ".git/*"
 
 
