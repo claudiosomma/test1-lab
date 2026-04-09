@@ -3,10 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>jlipper</title>
+    <title>Jlipper</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: #f4f4f4;
+      }
+      .toolbar {
+        height: 56px;
+        background: #222;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        font-size: 16px;
+      }
+      .main {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+      .canvas-placeholder {
+        width: 100%;
+        max-width: 960px;
+        height: 540px;
+        background: #fff;
+        border: 2px dashed #ccc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
-    <script src="js/main.js" defer></script>
+    <div class="toolbar">Toolbar</div>
+    <main class="main">
+      <div class="canvas-placeholder">Canvas Placeholder</div>
+    </main>
+    <script src="js/app.js"></script>
   </body>
 </html>
