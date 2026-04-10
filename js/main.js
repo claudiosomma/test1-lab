@@ -1,5 +1,1 @@
-const app = document.getElementById("app");
-
-if (app) {
-  app.textContent = "Hello World";
-}
+// This file has been moved to /jscript/main.js.
