@@ -43,8 +43,6 @@ body {
 .console__content {
   line-height: 1.5;
   white-space: pre-wrap;
-}
-
-.console__content p {
-  margin: 0 0 8px;
+  outline: none;
+  min-height: 100%;
 }

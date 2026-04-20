@@ -10,11 +10,14 @@
     <div class="toolbar">Menu Bar (Reserved)</div>
     <main class="main">
       <section class="console" aria-label="Command line console">
-        <div class="console__content">
-          <p>jlipper@local:~$</p>
-          <p>Welcome to Jlipper.</p>
-          <p>Console output will appear here.</p>
-        </div>
+        <div
+          class="console__content"
+          role="textbox"
+          aria-multiline="true"
+          contenteditable="true"
+        >Welcome to Jlipper.
+Console output will appear here.
+> </div>
       </section>
     </main>
     <script src="jscript/main.js"></script>
