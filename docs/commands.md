@@ -1,60 +1,55 @@
-# JLIPPER Command Set (v1)
+# JLIPPER Command Grammar (v1)
 
-This document defines the first commands supported by the console parser and their basic grammar. Scope is intentionally small and focused.
+This document defines the initial command grammar for the console parser. Scope is intentionally small and focused on **CREATE**, **USE**, and **SELECT**. The grammar below is written in a compact EBNF-style notation to guide parser implementation.
 
 ## Conventions
-- Keywords are case-insensitive unless noted.
-- Identifiers are case-sensitive and follow typical Clipper naming: start with a letter, then letters/numbers/underscore.
-- Paths may be quoted with single or double quotes when they include spaces.
+- Keywords are **case-insensitive**.
+- Identifiers are **case-sensitive** and follow Clipper-style naming.
+- Whitespace is **one or more spaces or tabs**, unless otherwise noted.
+- End-of-command is **end of input** (newline in console).
+- Paths may be quoted with **single or double quotes** when they include spaces.
 
-## Commands
-
-### 1) CREATE
-Creates a new DBF table.
-
-**Grammar**
+## Tokens
 ```
-CREATE <table_name>
+LETTER      = "A".."Z" | "a".."z" ;
+DIGIT       = "0".."9" ;
+UNDERSCORE  = "_" ;
+
+IDENT       = LETTER , { LETTER | DIGIT | UNDERSCORE } ;
+INTEGER     = DIGIT , { DIGIT } ;
+
+QUOTE       = "\"" | "'" ;
+STRING      = QUOTE , { any-character-except-QUOTE } , QUOTE ;
+
+PATH        = STRING | IDENT | ( IDENT , { "/" | "\\" | "." | "-" | IDENT | DIGIT | UNDERSCORE } ) ;
+
+WS          = { " " | "\t" } ;
+WS1         = " " | "\t" , { " " | "\t" } ;
+EOL         = end-of-input ;
 ```
 
-**Parts**
-- `table_name` (required): identifier for the DBF file (without extension).
+Notes:
+- `PATH` is intentionally permissive to allow simple unquoted file paths. If the parser prefers stricter rules, require `STRING` for paths with spaces.
+- `IDENT` is used for table names and aliases.
 
-**Examples**
+## Commands (EBNF)
+```
+COMMAND     = CREATE | USE | SELECT ;
+
+CREATE      = "CREATE" , WS1 , TABLE_NAME , WS , EOL ;
+USE         = "USE" , WS1 , TABLE_REF , [ WS1 , "ALIAS" , WS1 , ALIAS_NAME ] , WS , EOL ;
+SELECT      = "SELECT" , WS1 , WORK_AREA , WS , EOL ;
+
+TABLE_NAME  = IDENT ;
+ALIAS_NAME  = IDENT ;
+TABLE_REF   = PATH | IDENT ;
+WORK_AREA   = INTEGER | IDENT ;
+```
+
+## Examples
 - `CREATE customers`
 - `CREATE Orders`
-
----
-
-### 2) USE
-Opens an existing DBF table and makes it the current work area.
-
-**Grammar**
-```
-USE <table_name> [ALIAS <alias_name>]
-```
-
-**Parts**
-- `table_name` (required): identifier or path to the DBF.
-- `ALIAS <alias_name>` (optional): sets an alias for the opened table.
-
-**Examples**
 - `USE customers`
 - `USE "data/Customers" ALIAS cust`
-
----
-
-### 3) SELECT
-Selects a work area by numeric position or alias.
-
-**Grammar**
-```
-SELECT <work_area>
-```
-
-**Parts**
-- `work_area` (required): either a positive integer (work area number) or an alias name.
-
-**Examples**
 - `SELECT 1`
 - `SELECT cust`
