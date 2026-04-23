@@ -5,6 +5,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   const parser = window.jlipperParser;
+  const dbfApi = window.jlipperDbf;
   const state = {
     currentDbf: null,
   };
@@ -271,52 +272,19 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  const buildDbfBytes = (fields) => {
-    const now = new Date();
-    const headerLength = 32 + fields.length * 32 + 1;
-    const recordLength =
-      1 + fields.reduce((total, field) => total + field.length, 0);
-    const totalLength = headerLength + 1;
-    const bytes = new Uint8Array(totalLength);
-    const view = new DataView(bytes.buffer);
-
-    view.setUint8(0, 0x03);
-    view.setUint8(1, now.getFullYear() - 1900);
-    view.setUint8(2, now.getMonth() + 1);
-    view.setUint8(3, now.getDate());
-    view.setUint32(4, 0, true);
-    view.setUint16(8, headerLength, true);
-    view.setUint16(10, recordLength, true);
-
-    let offset = 32;
-    fields.forEach((field) => {
-      for (let i = 0; i < 11; i += 1) {
-        bytes[offset + i] = 0;
-      }
-      for (let i = 0; i < field.name.length && i < 10; i += 1) {
-        bytes[offset + i] = field.name.charCodeAt(i);
-      }
-      bytes[offset + 11] = field.type.charCodeAt(0);
-      bytes[offset + 16] = field.length;
-      bytes[offset + 17] = field.decimals;
-      offset += 32;
-    });
-
-    bytes[offset] = 0x0d;
-    bytes[totalLength - 1] = 0x1a;
-
-    return bytes;
-  };
-
   const createDbf = (tableName, fields) => {
     const existing = findDbfData(tableName);
     if (existing) {
       throw new Error(`DBF "${existing.name}" already exists`);
     }
 
+    if (!dbfApi || typeof dbfApi.writeDbf !== "function") {
+      throw new Error("DBF writer not available");
+    }
+
     const normalizedFields = validateCreateFields(fields);
     const name = normalizeDbfName(tableName);
-    const bytes = buildDbfBytes(normalizedFields);
+    const bytes = dbfApi.writeDbf({ fields: normalizedFields, records: [] });
 
     const store = getDbfStore();
     if (store instanceof Map) {
