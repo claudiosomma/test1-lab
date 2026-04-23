@@ -1,0 +1,13 @@
+{
+  "name": "jlipper",
+  "version": "0.0.0",
+  "private": true,
+  "description": "this application is a clone of clipper implemented in javascript to run inside a browser.",
+  "scripts": {
+    "test": "node tests/lexer.test.js && node tests/parser.test.js"
+  },
+  "dependencies": {
+    "moo": "^0.5.2",
+    "nearley": "^2.20.1"
+  }
+}
