@@ -389,6 +389,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ];
     }
     if (!parser) {
+      console.error("Error: command parser not available.");
       return ["Error: command parser not available."];
     }
     try {
@@ -404,6 +405,7 @@ window.addEventListener("DOMContentLoaded", () => {
           return [`Error: unsupported command type "${ast.type}".`];
       }
     } catch (error) {
+      console.error("Command failed:", error);
       return [`Error: ${error.message}`];
     }
   };
