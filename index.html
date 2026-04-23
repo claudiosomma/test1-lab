@@ -1,1 +1,89 @@
-<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /> <title>Jlipper</title> <link rel="stylesheet" href="css/styles.css" /> </head> <body> <div class="toolbar">Menu Bar (Reserved)</div> <main class="main"> <section class="console" aria-label="Command line console"> <div class="console__content" role="textbox" aria-multiline="true" contenteditable="true" >Welcome to Jlipper. Console output will appear here. > </div> </section> </main> <script src="https://unpkg.com/moo@0.5.2/dist/moo.js"></script> <script src="https://unpkg.com/nearley@2.20.1/lib/nearley.js"></script> <script src="jscript/lexer.js"></script> <script src="jscript/parser.js"></script> <script src="jscript/dbf.js"></script> <script src="jscript/main.js"></script> </body> </html>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jlipper</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="toolbar">Menu Bar (Reserved)</div>
+    <main class="main">
+      <section class="console" aria-label="Command line console">
+        <div
+          class="console__content"
+          role="textbox"
+          aria-multiline="true"
+          contenteditable="true"
+        >Welcome to Jlipper. Console output will appear here. > </div>
+      </section>
+    </main>
+    <script>
+      window.__jlipperCjsModules = window.__jlipperCjsModules || {};
+      window.__jlipperCjsModules.mooPrevModule = window.module;
+      window.__jlipperCjsModules.mooPrevExports = window.exports;
+      window.__jlipperCjsModules.moo = { exports: {} };
+      window.module = window.__jlipperCjsModules.moo;
+      window.exports = window.module.exports;
+    </script>
+    <script src="https://unpkg.com/moo@0.5.2/dist/moo.js"></script>
+    <script>
+      (function () {
+        const store = window.__jlipperCjsModules || {};
+        const exported = store.moo && store.moo.exports;
+        if (
+          !window.moo &&
+          exported &&
+          (typeof exported === "function" || Object.keys(exported).length)
+        ) {
+          window.moo = exported;
+        }
+        if (store.mooPrevModule === undefined) {
+          delete window.module;
+        } else {
+          window.module = store.mooPrevModule;
+        }
+        if (store.mooPrevExports === undefined) {
+          delete window.exports;
+        } else {
+          window.exports = store.mooPrevExports;
+        }
+      })();
+    </script>
+    <script>
+      window.__jlipperCjsModules.nearleyPrevModule = window.module;
+      window.__jlipperCjsModules.nearleyPrevExports = window.exports;
+      window.__jlipperCjsModules.nearley = { exports: {} };
+      window.module = window.__jlipperCjsModules.nearley;
+      window.exports = window.module.exports;
+    </script>
+    <script src="https://unpkg.com/nearley@2.20.1/lib/nearley.js"></script>
+    <script>
+      (function () {
+        const store = window.__jlipperCjsModules || {};
+        const exported = store.nearley && store.nearley.exports;
+        if (
+          !window.nearley &&
+          exported &&
+          (typeof exported === "function" || Object.keys(exported).length)
+        ) {
+          window.nearley = exported;
+        }
+        if (store.nearleyPrevModule === undefined) {
+          delete window.module;
+        } else {
+          window.module = store.nearleyPrevModule;
+        }
+        if (store.nearleyPrevExports === undefined) {
+          delete window.exports;
+        } else {
+          window.exports = store.nearleyPrevExports;
+        }
+      })();
+    </script>
+    <script src="jscript/lexer.js"></script>
+    <script src="jscript/parser.js"></script>
+    <script src="jscript/dbf.js"></script>
+    <script src="jscript/main.js"></script>
+  </body>
+</html>
