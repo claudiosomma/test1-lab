@@ -4,7 +4,6 @@ window.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  const lexer = window.jlipperLexer;
   const parser = window.jlipperParser;
   const state = {
     currentDbf: null,
@@ -208,12 +207,11 @@ window.addEventListener("DOMContentLoaded", () => {
         " - use <table> [alias <name>]: open a DBF",
       ];
     }
-    if (!lexer || !parser) {
+    if (!parser) {
       return ["Error: command parser not available."];
     }
     try {
-      const tokens = lexer.tokenize(command);
-      const ast = parser.parse(tokens);
+      const ast = parser.parse(command);
       switch (ast.type) {
         case "UseCommand":
           return openDbf(ast.table, ast.alias);

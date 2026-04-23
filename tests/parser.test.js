@@ -1,5 +1,4 @@
 const assert = require("assert");
-const { tokenize } = require("../jscript/lexer");
 const { parse } = require("../jscript/parser");
 
 const run = (name, fn) => {
@@ -14,7 +13,7 @@ const run = (name, fn) => {
 };
 
 run("parses CREATE command", () => {
-  const ast = parse(tokenize("CREATE customers"));
+  const ast = parse("CREATE customers");
   assert.deepStrictEqual(ast, {
     type: "CreateCommand",
     tableName: "customers",
@@ -22,7 +21,7 @@ run("parses CREATE command", () => {
 });
 
 run("parses USE command with alias", () => {
-  const ast = parse(tokenize('USE "data/Customers" ALIAS cust'));
+  const ast = parse('USE "data/Customers" ALIAS cust');
   assert.deepStrictEqual(ast, {
     type: "UseCommand",
     table: { type: "String", value: "data/Customers" },
@@ -31,7 +30,7 @@ run("parses USE command with alias", () => {
 });
 
 run("parses USE command without alias", () => {
-  const ast = parse(tokenize("USE customers"));
+  const ast = parse("USE customers");
   assert.deepStrictEqual(ast, {
     type: "UseCommand",
     table: { type: "Identifier", value: "customers" },
@@ -40,7 +39,7 @@ run("parses USE command without alias", () => {
 });
 
 run("parses SELECT command with number", () => {
-  const ast = parse(tokenize("SELECT 1"));
+  const ast = parse("SELECT 1");
   assert.deepStrictEqual(ast, {
     type: "SelectCommand",
     workArea: { type: "Number", value: 1 },
@@ -48,7 +47,7 @@ run("parses SELECT command with number", () => {
 });
 
 run("parses SELECT command with identifier", () => {
-  const ast = parse(tokenize("SELECT cust"));
+  const ast = parse("SELECT cust");
   assert.deepStrictEqual(ast, {
     type: "SelectCommand",
     workArea: { type: "Identifier", value: "cust" },
@@ -56,20 +55,17 @@ run("parses SELECT command with identifier", () => {
 });
 
 run("rejects empty input", () => {
-  assert.throws(() => parse(tokenize("")), /Empty input/);
+  assert.throws(() => parse(""), /Empty input/);
 });
 
 run("rejects unknown command", () => {
-  assert.throws(() => parse(tokenize("DROP table")), /Unknown command/);
+  assert.throws(() => parse("DROP table"), /Unknown command/);
 });
 
 run("rejects missing arguments", () => {
-  assert.throws(() => parse(tokenize("CREATE")), /Expected table name/);
+  assert.throws(() => parse("CREATE"), /Invalid command syntax/);
 });
 
 run("rejects extra tokens", () => {
-  assert.throws(
-    () => parse(tokenize("CREATE customers extra")),
-    /Unexpected tokens/
-  );
+  assert.throws(() => parse("CREATE customers extra"), /Invalid command syntax/);
 });

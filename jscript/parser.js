@@ -1,150 +1,127 @@
-const lexer = typeof require !== "undefined" ? require("./lexer") : window.jlipperLexer;
+const nearley = typeof require !== "undefined" ? require("nearley") : window.nearley;
+const lexerApi = typeof require !== "undefined" ? require("./lexer") : window.jlipperLexer;
 
-const { TOKEN_TYPES } = lexer;
-
-class Parser {
-  constructor(tokens, commandParsers) {
-    this.tokens = tokens;
-    this.index = 0;
-    this.commandParsers = commandParsers;
-  }
-
-  peek() {
-    return this.tokens[this.index] || null;
-  }
-
-  isAtEnd() {
-    return this.index >= this.tokens.length;
-  }
-
-  advance() {
-    if (!this.isAtEnd()) {
-      this.index += 1;
-    }
-  }
-
-  matchKeyword(keyword) {
-    const token = this.peek();
-    if (
-      token &&
-      token.type === TOKEN_TYPES.IDENTIFIER &&
-      token.value.toUpperCase() === keyword
-    ) {
-      this.advance();
-      return true;
-    }
-    return false;
-  }
-
-  expectKeyword(keyword) {
-    if (!this.matchKeyword(keyword)) {
-      throw new Error(`Expected keyword ${keyword}`);
-    }
-  }
-
-  consume(type, label) {
-    const token = this.peek();
-    if (!token || token.type !== type) {
-      throw new Error(`Expected ${label}`);
-    }
-    this.advance();
-    return token;
-  }
-
-  parseCommand() {
-    if (this.isAtEnd()) {
-      throw new Error("Empty input");
-    }
-    const token = this.peek();
-    if (!token || token.type !== TOKEN_TYPES.IDENTIFIER) {
-      throw new Error("Expected command");
-    }
-    const keyword = token.value.toUpperCase();
-    const handler = this.commandParsers[keyword];
-    if (!handler) {
-      throw new Error(`Unknown command "${token.value}"`);
-    }
-    const ast = handler(this);
-    if (!this.isAtEnd()) {
-      throw new Error("Unexpected tokens after command");
-    }
-    return ast;
-  }
+if (!nearley) {
+  throw new Error("Nearley parser dependency not found.");
+}
+if (!lexerApi) {
+  throw new Error("Lexer not available.");
 }
 
-const parseCreate = (parser) => {
-  parser.expectKeyword("CREATE");
-  const tableToken = parser.consume(TOKEN_TYPES.IDENTIFIER, "table name");
-  return {
-    type: "CreateCommand",
-    tableName: tableToken.value,
-  };
+const { lexer, TOKEN_TYPES } = lexerApi;
+
+const id = (d) => d[0];
+const keyword = (word) => ({
+  type: TOKEN_TYPES.IDENTIFIER,
+  test: (token) => token.value.toUpperCase() === word,
+});
+
+const grammar = {
+  Lexer: lexer,
+  ParserRules: [
+    { name: "Main", symbols: ["_", "Command", "_"], postprocess: (d) => d[1] },
+    { name: "Command", symbols: ["CreateCommand"], postprocess: id },
+    { name: "Command", symbols: ["UseCommand"], postprocess: id },
+    { name: "Command", symbols: ["SelectCommand"], postprocess: id },
+    {
+      name: "CreateCommand",
+      symbols: [keyword("CREATE"), "_", "Identifier"],
+      postprocess: (d) => ({ type: "CreateCommand", tableName: d[2].value }),
+    },
+    {
+      name: "UseCommand",
+      symbols: [keyword("USE"), "_", "TableRef", "_", "AliasClause"],
+      postprocess: (d) => ({ type: "UseCommand", table: d[2], alias: d[4] }),
+    },
+    {
+      name: "UseCommand",
+      symbols: [keyword("USE"), "_", "TableRef"],
+      postprocess: (d) => ({ type: "UseCommand", table: d[2], alias: null }),
+    },
+    {
+      name: "AliasClause",
+      symbols: [keyword("ALIAS"), "_", "Identifier"],
+      postprocess: (d) => d[2].value,
+    },
+    { name: "TableRef", symbols: ["String"], postprocess: id },
+    { name: "TableRef", symbols: ["Identifier"], postprocess: id },
+    {
+      name: "SelectCommand",
+      symbols: [keyword("SELECT"), "_", "WorkArea"],
+      postprocess: (d) => ({ type: "SelectCommand", workArea: d[2] }),
+    },
+    { name: "WorkArea", symbols: ["Number"], postprocess: id },
+    { name: "WorkArea", symbols: ["Identifier"], postprocess: id },
+    {
+      name: "Identifier",
+      symbols: [{ type: TOKEN_TYPES.IDENTIFIER }],
+      postprocess: (d) => ({ type: "Identifier", value: d[0].value }),
+    },
+    {
+      name: "String",
+      symbols: [{ type: TOKEN_TYPES.STRING }],
+      postprocess: (d) => ({ type: "String", value: d[0].value }),
+    },
+    {
+      name: "Number",
+      symbols: [{ type: TOKEN_TYPES.NUMBER }],
+      postprocess: (d) => ({ type: "Number", value: Number(d[0].value) }),
+    },
+    { name: "_", symbols: [] },
+    { name: "_", symbols: ["_", "ws"], postprocess: () => null },
+    {
+      name: "ws",
+      symbols: [{ type: TOKEN_TYPES.WHITESPACE }],
+      postprocess: () => null,
+    },
+  ],
+  ParserStart: "Main",
 };
 
-const parseUse = (parser) => {
-  parser.expectKeyword("USE");
-  const tableToken = parser.peek();
-  if (!tableToken) {
-    throw new Error("Expected table reference");
+const COMMAND_KEYWORDS = new Set(["CREATE", "USE", "SELECT"]);
+
+const getFirstToken = (input) => {
+  lexer.reset(input);
+  let token = lexer.next();
+  while (token) {
+    if (token.type !== TOKEN_TYPES.WHITESPACE) {
+      return token;
+    }
+    token = lexer.next();
   }
-  if (
-    tableToken.type !== TOKEN_TYPES.IDENTIFIER &&
-    tableToken.type !== TOKEN_TYPES.STRING
-  ) {
-    throw new Error("Expected table reference");
-  }
-  parser.advance();
-  const tableRef = {
-    type: tableToken.type === TOKEN_TYPES.STRING ? "String" : "Identifier",
-    value: tableToken.value,
-  };
-  let alias = null;
-  if (parser.matchKeyword("ALIAS")) {
-    const aliasToken = parser.consume(TOKEN_TYPES.IDENTIFIER, "alias name");
-    alias = aliasToken.value;
-  }
-  return {
-    type: "UseCommand",
-    table: tableRef,
-    alias,
-  };
+  return null;
 };
 
-const parseSelect = (parser) => {
-  parser.expectKeyword("SELECT");
-  const token = parser.peek();
-  if (!token) {
-    throw new Error("Expected work area");
+const parse = (input) => {
+  if (typeof input !== "string") {
+    throw new Error("Input must be a string");
   }
-  if (
-    token.type !== TOKEN_TYPES.NUMBER &&
-    token.type !== TOKEN_TYPES.IDENTIFIER
-  ) {
-    throw new Error("Expected work area");
+  if (!input.trim()) {
+    throw new Error("Empty input");
   }
-  parser.advance();
-  const workArea = {
-    type: token.type === TOKEN_TYPES.NUMBER ? "Number" : "Identifier",
-    value: token.type === TOKEN_TYPES.NUMBER ? Number(token.value) : token.value,
-  };
-  return {
-    type: "SelectCommand",
-    workArea,
-  };
+  const firstToken = getFirstToken(input);
+  if (firstToken && firstToken.type === TOKEN_TYPES.IDENTIFIER) {
+    const keywordValue = firstToken.value.toUpperCase();
+    if (!COMMAND_KEYWORDS.has(keywordValue)) {
+      throw new Error(`Unknown command "${firstToken.value}"`);
+    }
+  }
+  const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
+  try {
+    parser.feed(input);
+  } catch (error) {
+    throw new Error("Invalid command syntax");
+  }
+  if (parser.results.length === 0) {
+    throw new Error("Invalid command syntax");
+  }
+  if (parser.results.length > 1) {
+    throw new Error("Ambiguous command");
+  }
+  return parser.results[0];
 };
 
-const DEFAULT_COMMAND_PARSERS = {
-  CREATE: parseCreate,
-  USE: parseUse,
-  SELECT: parseSelect,
-};
-
-const parse = (tokens, commandParsers = DEFAULT_COMMAND_PARSERS) => {
-  const parser = new Parser(tokens, commandParsers);
-  return parser.parseCommand();
-};
-
-const parserApi = { parse, Parser, DEFAULT_COMMAND_PARSERS };
+const parserApi = { parse };
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = parserApi;
