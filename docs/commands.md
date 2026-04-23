@@ -36,9 +36,12 @@ Notes:
 ```
 COMMAND     = CREATE | USE | SELECT ;
 
-CREATE      = "CREATE" , WS1 , TABLE_NAME , WS , EOL ;
+CREATE      = "CREATE" , WS1 , TABLE_NAME , WS , "(" , WS , FIELD , { WS , "," , WS , FIELD } , WS , ")" , WS , EOL ;
 USE         = "USE" , WS1 , TABLE_REF , [ WS1 , "ALIAS" , WS1 , ALIAS_NAME ] , WS , EOL ;
 SELECT      = "SELECT" , WS1 , WORK_AREA , WS , EOL ;
+
+FIELD       = FIELD_NAME , WS1 , FIELD_TYPE , [ WS , "(" , WS , INTEGER , [ WS , "," , WS , INTEGER ] , WS , ")" ] ;
+FIELD_TYPE  = "C" | "N" | "L" | "D" ;
 
 TABLE_NAME  = IDENT ;
 ALIAS_NAME  = IDENT ;
@@ -47,8 +50,8 @@ WORK_AREA   = INTEGER | IDENT ;
 ```
 
 ## Examples
-- `CREATE customers`
-- `CREATE Orders`
+- `CREATE customers (id N(4), name C(20), active L, joined D)`
+- `CREATE Orders (order_id N(6), notes C(40))`
 - `USE customers`
 - `USE "data/Customers" ALIAS cust`
 - `SELECT 1`

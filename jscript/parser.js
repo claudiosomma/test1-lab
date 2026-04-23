@@ -15,6 +15,11 @@ const keyword = (word) => ({
   type: TOKEN_TYPES.IDENTIFIER,
   test: (token) => token.value.toUpperCase() === word,
 });
+const fieldTypeKeyword = (word) => ({
+  type: TOKEN_TYPES.IDENTIFIER,
+  test: (token) => token.value.toUpperCase() === word,
+});
+const punctuation = (value) => ({ type: TOKEN_TYPES.PUNCTUATION, value });
 
 const grammar = {
   Lexer: lexer,
@@ -25,9 +30,90 @@ const grammar = {
     { name: "Command", symbols: ["SelectCommand"], postprocess: id },
     {
       name: "CreateCommand",
-      symbols: [keyword("CREATE"), "_", "Identifier"],
-      postprocess: (d) => ({ type: "CreateCommand", tableName: d[2].value }),
+      symbols: [keyword("CREATE"), "_", "Identifier", "_", "FieldDefinitions"],
+      postprocess: (d) => ({
+        type: "CreateCommand",
+        tableName: d[2].value,
+        fields: d[4],
+      }),
     },
+    {
+      name: "FieldDefinitions",
+      symbols: [punctuation("("), "_", "FieldList", "_", punctuation(")")],
+      postprocess: (d) => d[2],
+    },
+    {
+      name: "FieldList",
+      symbols: ["FieldDefinition", "FieldListTail"],
+      postprocess: (d) => [d[0], ...d[1]],
+    },
+    { name: "FieldListTail", symbols: [], postprocess: () => [] },
+    {
+      name: "FieldListTail",
+      symbols: ["_", punctuation(","), "_", "FieldDefinition", "FieldListTail"],
+      postprocess: (d) => [d[3], ...d[4]],
+    },
+    {
+      name: "FieldDefinition",
+      symbols: ["Identifier", "_", "FieldTypeSpec"],
+      postprocess: (d) => ({
+        name: d[0].value,
+        type: d[2].type,
+        length: d[2].length,
+        decimals: d[2].decimals,
+      }),
+    },
+    {
+      name: "FieldTypeSpec",
+      symbols: [
+        "FieldType",
+        "_",
+        punctuation("("),
+        "_",
+        "Number",
+        "_",
+        punctuation(","),
+        "_",
+        "Number",
+        "_",
+        punctuation(")"),
+      ],
+      postprocess: (d) => ({
+        type: d[0],
+        length: d[4].value,
+        decimals: d[8].value,
+      }),
+    },
+    {
+      name: "FieldTypeSpec",
+      symbols: [
+        "FieldType",
+        "_",
+        punctuation("("),
+        "_",
+        "Number",
+        "_",
+        punctuation(")"),
+      ],
+      postprocess: (d) => ({
+        type: d[0],
+        length: d[4].value,
+        decimals: 0,
+      }),
+    },
+    {
+      name: "FieldTypeSpec",
+      symbols: ["FieldType"],
+      postprocess: (d) => ({
+        type: d[0],
+        length: null,
+        decimals: 0,
+      }),
+    },
+    { name: "FieldType", symbols: [fieldTypeKeyword("C")], postprocess: () => "C" },
+    { name: "FieldType", symbols: [fieldTypeKeyword("N")], postprocess: () => "N" },
+    { name: "FieldType", symbols: [fieldTypeKeyword("L")], postprocess: () => "L" },
+    { name: "FieldType", symbols: [fieldTypeKeyword("D")], postprocess: () => "D" },
     {
       name: "UseCommand",
       symbols: [keyword("USE"), "_", "TableRef", "_", "AliasClause"],

@@ -45,12 +45,27 @@ window.addEventListener("DOMContentLoaded", () => {
     return bytes;
   };
 
+  const encodeBytesToBase64 = (bytes) => {
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 1) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+  };
+
   const normalizeDbfCandidates = (name) => {
     const candidates = [name];
     if (!name.toLowerCase().endsWith(".dbf")) {
       candidates.push(`${name}.dbf`);
     }
     return candidates;
+  };
+
+  const normalizeDbfName = (name) => {
+    if (!name.toLowerCase().endsWith(".dbf")) {
+      return `${name}.dbf`;
+    }
+    return name;
   };
 
   const findInMemoryDbf = (store, name) => {
@@ -162,6 +177,167 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   };
 
+  const getDbfStore = () => {
+    if (!window.jlipperDbfStore) {
+      window.jlipperDbfStore = new Map();
+    }
+    return window.jlipperDbfStore;
+  };
+
+  const validateCreateFields = (fields) => {
+    if (!Array.isArray(fields) || fields.length === 0) {
+      throw new Error("CREATE requires at least one field definition");
+    }
+
+    const seen = new Set();
+    return fields.map((field) => {
+      const name = field.name;
+      if (!name) {
+        throw new Error("Field name is required");
+      }
+      if (name.length > 10) {
+        throw new Error(`Field name "${name}" exceeds 10 characters`);
+      }
+      const nameKey = name.toUpperCase();
+      if (seen.has(nameKey)) {
+        throw new Error(`Duplicate field name "${name}"`);
+      }
+      seen.add(nameKey);
+
+      const type = field.type?.toUpperCase();
+      if (!type || !["C", "N", "L", "D"].includes(type)) {
+        throw new Error(`Unsupported field type "${field.type}"`);
+      }
+
+      const hasLength = field.length !== null && field.length !== undefined;
+      let length = hasLength ? field.length : null;
+      let decimals = field.decimals ?? 0;
+
+      if (hasLength) {
+        if (!Number.isInteger(length)) {
+          throw new Error(`Invalid length for field "${name}"`);
+        }
+        if (length <= 0 || length > 255) {
+          throw new Error(`Invalid length for field "${name}"`);
+        }
+      }
+
+      if (!Number.isInteger(decimals) || decimals < 0) {
+        throw new Error(`Invalid decimals for field "${name}"`);
+      }
+
+      if (type === "C") {
+        if (!hasLength) {
+          throw new Error(`Character field "${name}" requires a length`);
+        }
+        decimals = 0;
+      }
+
+      if (type === "N") {
+        if (!hasLength) {
+          throw new Error(`Numeric field "${name}" requires a length`);
+        }
+        if (decimals > length) {
+          throw new Error(`Decimals exceed length for field "${name}"`);
+        }
+      }
+
+      if (type === "L") {
+        if (!hasLength) {
+          length = 1;
+        }
+        if (length !== 1) {
+          throw new Error(`Logical field "${name}" must have length 1`);
+        }
+        decimals = 0;
+      }
+
+      if (type === "D") {
+        if (!hasLength) {
+          length = 8;
+        }
+        if (length !== 8) {
+          throw new Error(`Date field "${name}" must have length 8`);
+        }
+        decimals = 0;
+      }
+
+      return {
+        name,
+        type,
+        length,
+        decimals,
+      };
+    });
+  };
+
+  const buildDbfBytes = (fields) => {
+    const now = new Date();
+    const headerLength = 32 + fields.length * 32 + 1;
+    const recordLength =
+      1 + fields.reduce((total, field) => total + field.length, 0);
+    const totalLength = headerLength + 1;
+    const bytes = new Uint8Array(totalLength);
+    const view = new DataView(bytes.buffer);
+
+    view.setUint8(0, 0x03);
+    view.setUint8(1, now.getFullYear() - 1900);
+    view.setUint8(2, now.getMonth() + 1);
+    view.setUint8(3, now.getDate());
+    view.setUint32(4, 0, true);
+    view.setUint16(8, headerLength, true);
+    view.setUint16(10, recordLength, true);
+
+    let offset = 32;
+    fields.forEach((field) => {
+      for (let i = 0; i < 11; i += 1) {
+        bytes[offset + i] = 0;
+      }
+      for (let i = 0; i < field.name.length && i < 10; i += 1) {
+        bytes[offset + i] = field.name.charCodeAt(i);
+      }
+      bytes[offset + 11] = field.type.charCodeAt(0);
+      bytes[offset + 16] = field.length;
+      bytes[offset + 17] = field.decimals;
+      offset += 32;
+    });
+
+    bytes[offset] = 0x0d;
+    bytes[totalLength - 1] = 0x1a;
+
+    return bytes;
+  };
+
+  const createDbf = (tableName, fields) => {
+    const existing = findDbfData(tableName);
+    if (existing) {
+      throw new Error(`DBF "${existing.name}" already exists`);
+    }
+
+    const normalizedFields = validateCreateFields(fields);
+    const name = normalizeDbfName(tableName);
+    const bytes = buildDbfBytes(normalizedFields);
+
+    const store = getDbfStore();
+    if (store instanceof Map) {
+      store.set(name, bytes);
+    } else {
+      store[name] = bytes;
+    }
+
+    const storageKey = `jlipper.dbf.${name}`;
+    try {
+      window.localStorage.setItem(storageKey, encodeBytesToBase64(bytes));
+    } catch (error) {
+      throw new Error("Failed to save DBF to local storage");
+    }
+
+    return [
+      `Created DBF "${name}".`,
+      `Fields: ${normalizedFields.length}, Records: 0.`,
+    ];
+  };
+
   const openDbf = (tableRef, alias) => {
     const lookupName = tableRef.value;
     const stored = findDbfData(lookupName);
@@ -204,7 +380,12 @@ window.addEventListener("DOMContentLoaded", () => {
       return [
         "Available commands:",
         " - help: show this message",
-        " - use <table> [alias <name>]: open a DBF",
+        " - create <table> (field C(10), field2 N(5,2), field3 L, field4 D)",
+        "   Example: CREATE customers (id N(4), name C(20), active L, joined D)",
+        " - use <table> [alias <name>]",
+        "   Example: USE customers ALIAS cust",
+        " - select <workarea>",
+        "   Example: SELECT 1",
       ];
     }
     if (!parser) {
@@ -216,7 +397,7 @@ window.addEventListener("DOMContentLoaded", () => {
         case "UseCommand":
           return openDbf(ast.table, ast.alias);
         case "CreateCommand":
-          return ["Error: CREATE command not implemented yet."];
+          return createDbf(ast.tableName, ast.fields);
         case "SelectCommand":
           return ["Error: SELECT command not implemented yet."];
         default:
