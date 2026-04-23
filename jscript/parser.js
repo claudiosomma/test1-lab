@@ -1,5 +1,26 @@
-const nearley = typeof require !== "undefined" ? require("nearley") : window.nearley;
-const lexerApi = typeof require !== "undefined" ? require("./lexer") : window.jlipperLexer;
+const isBrowser = typeof window !== "undefined";
+let nearley = null;
+let lexerApi = null;
+
+if (isBrowser && window.nearley) {
+  nearley = window.nearley;
+} else if (typeof require !== "undefined") {
+  try {
+    nearley = require("nearley");
+  } catch (error) {
+    nearley = null;
+  }
+}
+
+if (isBrowser && window.jlipperLexer) {
+  lexerApi = window.jlipperLexer;
+} else if (typeof require !== "undefined") {
+  try {
+    lexerApi = require("./lexer");
+  } catch (error) {
+    lexerApi = null;
+  }
+}
 
 if (!nearley) {
   throw new Error("Nearley parser dependency not found.");
