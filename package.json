@@ -4,7 +4,7 @@
   "private": true,
   "description": "this application is a clone of clipper implemented in javascript to run inside a browser.",
   "scripts": {
-    "test": "node tests/lexer.test.js && node tests/parser.test.js"
+    "test": "node tests/lexer.test.js && node tests/parser.test.js && node tests/dbf.test.js"
   },
   "dependencies": {
     "moo": "^0.5.2",
