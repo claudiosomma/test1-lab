@@ -13,10 +13,18 @@ const run = (name, fn) => {
 };
 
 run("parses CREATE command", () => {
-  const ast = parse("CREATE customers");
+  const ast = parse(
+    "CREATE customers (id N(4), name C(10), active L, joined D)"
+  );
   assert.deepStrictEqual(ast, {
     type: "CreateCommand",
     tableName: "customers",
+    fields: [
+      { name: "id", type: "N", length: 4, decimals: 0 },
+      { name: "name", type: "C", length: 10, decimals: 0 },
+      { name: "active", type: "L", length: null, decimals: 0 },
+      { name: "joined", type: "D", length: null, decimals: 0 },
+    ],
   });
 });
 
@@ -63,7 +71,7 @@ run("rejects unknown command", () => {
 });
 
 run("rejects missing arguments", () => {
-  assert.throws(() => parse("CREATE"), /Invalid command syntax/);
+  assert.throws(() => parse("CREATE customers"), /Invalid command syntax/);
 });
 
 run("rejects extra tokens", () => {
