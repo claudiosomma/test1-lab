@@ -1,4 +1,15 @@
-const moo = typeof require !== "undefined" ? require("moo") : window.moo;
+const isBrowser = typeof window !== "undefined";
+let moo = null;
+
+if (isBrowser && window.moo) {
+  moo = window.moo;
+} else if (typeof require !== "undefined") {
+  try {
+    moo = require("moo");
+  } catch (error) {
+    moo = null;
+  }
+}
 
 if (!moo) {
   throw new Error("Moo lexer dependency not found.");
