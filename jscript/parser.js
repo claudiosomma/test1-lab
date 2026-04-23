@@ -3,7 +3,7 @@ let nearley = null;
 let lexerApi = null;
 
 if (isBrowser && window.nearley) {
-  nearley = window.nearley;
+  nearley = window.nearley.default ? window.nearley.default : window.nearley;
 } else if (typeof require !== "undefined") {
   try {
     nearley = require("nearley");
